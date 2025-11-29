@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Calculator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<h1>Calculator</h1>
+<input id="num1" type="number" placeholder="Num 1">
+<input id="num2" type="number" placeholder="Num 2">
+<button onclick="calc()">Add</button>
+<p id="result"></p>
+<script>
+function calc(){
+  let a=Number(document.getElementById("num1").value);
+  let b=Number(document.getElementById("num2").value);
+  document.getElementById("result").innerText="Result: "+(a+b);
+}
+</script>
+</body>
+</html>
