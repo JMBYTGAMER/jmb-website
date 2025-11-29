@@ -5,10 +5,14 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<h1>QR Code Generator</h1>
-<input id="qrText" placeholder="Enter text"/>
+
+<h1 class="title">QR Code Generator</h1>
+<input id="qrText" placeholder="Enter text" class="input">
+
 <button onclick="makeQR()">Generate</button>
+
 <div id="qrImage"></div>
+
 <script>
 function makeQR(){
   let text=document.getElementById("qrText").value;
@@ -16,5 +20,6 @@ function makeQR(){
     `<img src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${text}' />`;
 }
 </script>
+
 </body>
 </html>
