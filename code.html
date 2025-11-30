@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>5x5 Code Generator — Beautiful (Fixed)</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1226;--muted:#94a3b8;--accent:#7c3aed;--glass:rgba(255,255,255,0.03)}
+    html,body{height:100%;margin:0;font-family:Inter,Segoe UI,system-ui,Arial,sans-serif;background:linear-gradient(180deg,#071126 0%, #081826 60%);color:#e6eef8}
+    .wrap{max-width:980px;margin:36px auto;padding:28px;border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);box-shadow:0 10px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
+    h1{margin:0;font-size:22px;letter-spacing:0.2px}
+    p.lead{color:var(--muted);margin:6px 0 18px}
+    .controls{display:flex;gap:12px;align-items:center;margin-bottom:18px}
+    input[type=number]{width:96px;padding:10px 12px;border-radius:10px;border:0;background:var(--glass);color:inherit;font-weight:600}
+    button{cursor:pointer;padding:10px 14px;border-radius:10px;border:0;background:linear-gradient(90deg,var(--accent),#4f46e5);color:white;font-weight:700}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);padding:8px 12px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+    .code-card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .code-text{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:800;letter-spacing:1px;font-size:14px;background:rgba(0,0,0,0.15);padding:8px 12px;border-radius:8px}
+    .actions{display:flex;gap:8px}
+    .small{font-size:12px;color:var(--muted)}
+    .top-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+    .center{display:flex;gap:12px;align-items:center}
+    .toast{position:fixed;right:20px;bottom:20px;background:#0b1226;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 6px 30px rgba(2,6,23,0.6);display:none;color:#a7f3d0}
+    .footer{margin-top:16px;color:var(--muted);font-size:13px}
+    @media (max-width:520px){.controls{flex-direction:column;align-items:stretch}input[type=number]{width:100%}}
+  </style>
+</head>
+<body>
+  <div class="wrap" role="main">
+    <div class="top-row">
+      <div>
+        <h1>5×5 Code Generator</h1>
+        <p class="lead">Generate codes in the format <strong>xxxxx-xxxxx-xxxxx-xxxxx-xxxxx</strong>. Each code is A–Z / 0–9. This is a <em>mock</em> generator — codes are for testing only.</p>
+      </div>
+      <div class="center">
+        <label class="small" for="count">How many?</label>
+        <input id="count" type="number" min="1" max="200" value="10" />
+        <button id="gen" type="button">Generate</button>
+        <button id="copyAll" class="ghost" type="button">Copy All</button>
+        <button id="download" class="ghost" type="button">Download</button>
+      </div>
+    </div>
+
+    <div id="grid" class="grid" aria-live="polite"></div>
+
+    <div class="footer">Tip: Click the copy button to copy a single code. Use "Copy All" to copy every generated code.</div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', ()=> {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      function randChar(){ return chars[Math.floor(Math.random()*chars.length)]; }
+      function makeGroup(){ let s=''; for(let i=0;i<5;i++) s+=randChar(); return s; }
+      function makeCode(){ return `${makeGroup()}-${makeGroup()}-${makeGroup()}-${makeGroup()}-${makeGroup()}`; }
+
+      const grid = document.getElementById('grid');
+      const genBtn = document.getElementById('gen');
+      const countInput = document.getElementById('count');
+      const toast = document.getElementById('toast');
+      const copyAllBtn = document.getElementById('copyAll');
+      const downloadBtn = document.getElementById('download');
+
+      function showToast(txt){
+        toast.textContent = txt; toast.style.display = 'block';
+        if (toast._t) clearTimeout(toast._t);
+        toast._t = setTimeout(()=>{ toast.style.display='none'; }, 1600);
+      }
+
+      // robust copy: try navigator.clipboard, fallback to textarea + execCommand
+      function copyText(text){
+        if (!text) return Promise.reject(new Error('No text'));
+        if (navigator.clipboard && navigator.clipboard.writeText){
+          return navigator.clipboard.writeText(text);
+        }
+        return new Promise((resolve, reject) => {
+          try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly','');
+            ta.style.position = 'absolute';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            const sel = document.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(ta);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            const ok = document.execCommand('copy');
+            sel.removeAllRanges();
+            ta.remove();
+            if (ok) resolve();
+            else reject(new Error('Fallback copy failed'));
+          } catch (e) {
+            reject(e);
+          }
+        });
+      }
+
+      function renderCodes(n){
+        grid.innerHTML = '';
+        const frag = document.createDocumentFragment();
+        for(let i=0;i<n;i++){
+          const code = makeCode();
+          const card = document.createElement('div'); card.className = 'code-card';
+          const text = document.createElement('div'); text.className='code-text'; text.textContent = code; text.setAttribute('aria-label','code');
+          const actions = document.createElement('div'); actions.className='actions';
+          const btn = document.createElement('button'); btn.className='ghost'; btn.type = 'button';
+          btn.textContent = 'Copy';
+          btn.addEventListener('click', ()=>{
+            copyText(code).then(()=> showToast('Copied: ' + code)).catch(()=> showToast('Copy failed — try allowing clipboard or open via localhost'));
+          });
+          actions.appendChild(btn);
+          card.appendChild(text); card.appendChild(actions);
+          frag.appendChild(card);
+        }
+        grid.appendChild(frag);
+      }
+
+      genBtn.addEventListener('click', ()=>{
+        let n = Number(countInput.value) || 10;
+        n = Math.max(1, Math.min(200, n));
+        renderCodes(n);
+        showToast('Generated ' + n + ' codes');
+      });
+
+      copyAllBtn.addEventListener('click', ()=>{
+        const codes = Array.from(grid.querySelectorAll('.code-text')).map(el=>el.textContent).join('\n');
+        if(!codes){ showToast('No codes to copy'); return; }
+        copyText(codes).then(()=> showToast('Copied all codes')).catch(()=> showToast('Copy-all failed — try opening via localhost/https'));
+      });
+
+      downloadBtn.addEventListener('click', ()=>{
+        const codes = Array.from(grid.querySelectorAll('.code-text')).map(el=>el.textContent).join('\n');
+        if(!codes){ showToast('Nothing to download'); return; }
+        const blob = new Blob([codes],{type:'text/plain'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'codes.txt'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+        showToast('Downloaded codes.txt');
+      });
+
+      // initial render
+      renderCodes(10);
+    });
+  </script>
+</body>
+</html>
