@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>UUID Finder | JMB Host</title>
+</head>
+<body>
+
+<h2>Username → UUID</h2>
+
+<input id="user" placeholder="Minecraft username">
+<button onclick="getUUID()">Get UUID</button>
+
+<p id="result"></p>
+
+<script>
+async function getUUID() {
+  const u = document.getElementById("user").value;
+  const r = await fetch(
+    "https://api.mojang.com/users/profiles/minecraft/" + u
+  );
+  if (!r.ok) {
+    document.getElementById("result").innerText = "User not found";
+    return;
+  }
+  const d = await r.json();
+  document.getElementById("result").innerText = "UUID: " + d.id;
+}
+</script>
+
+</body>
+</html>
